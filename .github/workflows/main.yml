@@ -21,40 +21,46 @@ jobs:
           echo "RDP_USER=$user" >> $env:GITHUB_ENV
           echo "RDP_PASS=$pass" >> $env:GITHUB_ENV
 
-      - name: 2. Download & Launch Software Sessions
+      - name: 2. Download & Launch Exchanger
         shell: pwsh
         run: |
-          # استخدام رابط مباشر ومستقر لتجنب أخطاء الـ JWT
+          # استخدام رابط مباشر (Direct Download) لضمان تحميل الملف وليس صفحة الويب
           $url = "https://github.com/ungerland2002/01/releases/download/otohits/Exchanger-1.0.1-windows.exe"
-          Invoke-WebRequest -Uri $url -OutFile "C:\Exchanger.exe" -UserAgent "Mozilla/5.0"
+          $path = "$env:TEMP\Exchanger.exe"
           
-          # تشغيل الجلسات الثلاث الظاهرة في حسابك
-          $sessionConfigs = @(
-            "OnN8NWNvbXRvLmNvbXwxMCwxMjU",
-            "OnN8NWNvbXRvLmNvbXwxMCw4Ng",
-            "OnN8NWNvbXRvLmNvbXwxMCw4NQ"
-          )
+          Write-Host "Downloading Exchanger from: $url"
+          # استخدام -L لاتباع الروابط المختصرة و -OutFile للحفظ المباشر
+          Invoke-WebRequest -Uri $url -OutFile $path -MaximumRedirection 5
           
-          foreach ($cfg in $sessionConfigs) {
-            Write-Host "Starting Session: $cfg"
-            Start-Process "C:\Exchanger.exe" -ArgumentList "--config=$cfg"
-            Start-Sleep -Seconds 5
+          if (Test-Path $path) {
+              Write-Host "File downloaded successfully. Starting sessions..."
+              $sessionConfigs = @(
+                "OnN8NWNvbXRvLmNvbXwxMCwxMjU",
+                "OnN8NWNvbXRvLmNvbXwxMCw4Ng",
+                "OnN8NWNvbXRvLmNvbXwxMCw4NQ"
+              )
+              
+              foreach ($cfg in $sessionConfigs) {
+                Write-Host "Launching Session: $cfg"
+                Start-Process $path -ArgumentList "--config=$cfg"
+                Start-Sleep -Seconds 5
+              }
+          } else {
+              Write-Error "Failed to download Exchanger.exe"
+              exit 1
           }
 
-      - name: 3. Browser Keep-Alive
+      - name: 3. Browser & Network Setup
         run: |
           choco install googlechrome tailscale -y --silent
-          # فتح صفحة التبادل لضمان النشاط المستمر
           Start-Process "chrome.exe" -ArgumentList "https://5conto.com/exchange --no-first-run --start-maximized --mute-audio"
 
-      - name: 4. Connect Tailscale & Stay Active
+      - name: 4. Connect Tailscale & Stay Alive
         shell: pwsh
         run: |
-          # تأكد من وضع مفتاح TAILSCALE_AUTH_KEY في Settings > Secrets
           & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname="node-$(Get-Random)"
           $limit = (Get-Date).AddMinutes(350)
           while ((Get-Date) -lt $limit) {
-              # محاكاة نشاط لمنع إغلاق السيرفر
               [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
               Write-Host "Mining is Active: $(Get-Date)"
               Start-Sleep -Seconds 300
