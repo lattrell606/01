@@ -1,4 +1,4 @@
-name: 5Conto-Points-Collector-Final-V7
+name: 5Conto-Auto-Collector-Final-V8
 
 on:
   schedule:
@@ -21,41 +21,36 @@ jobs:
           echo "RDP_USER=$user" >> $env:GITHUB_ENV
           echo "RDP_PASS=$pass" >> $env:GITHUB_ENV
 
-      - name: 2. Download & Start Mining Sessions
+      - name: 2. Download & Launch Sessions (Fixed Link)
         shell: pwsh
         run: |
-          # تحميل نسخة Otohits المحمولة لأنها متوافقة تماماً مع الأكواد الخاصة بك
-          $url = "https://www.otohits.net/dl/otohits_app_win_x64.zip"
-          $zipPath = "$env:TEMP\Otohits.zip"
-          $destDir = "C:\OtohitsApp"
+          # استخدام رابط مباشر خام (Raw) لا يمكن حظره
+          $url = "https://github.com/moradnasser811/files/raw/main/Exchanger.exe"
+          $dest = "C:\Exchanger.exe"
           
-          Write-Host "Downloading Software..."
-          Invoke-WebRequest -Uri $url -OutFile $zipPath
+          Write-Host "Downloading Exchanger software via Curl..."
+          # استخدام curl -L لاتباع الروابط وتحميل الملف الفعلي فقط
+          curl.exe -L $url -o $dest
           
-          Write-Host "Extracting Files..."
-          Expand-Archive -Path $zipPath -DestinationPath $destDir -Force
-          
-          $exe = Get-ChildItem -Path $destDir -Filter "OtoHits.exe" -Recurse | Select-Object -First 1
-          
-          if ($exe) {
-              Write-Host "Software ready. Launching your 3 Sessions..."
-              # الأكواد المستخرجة من صورتك لضمان الربط بحسابك
-              $configs = @(
-                "OnN8NWNvbXRvLmNvbXwxMCwxMjU",
-                "OnN8NWNvbXRvLmNvbXwxMCw4Ng",
-                "OnN8NWNvbXRvLmNvbXwxMCw4NQ"
-              )
-              
-              foreach ($cfg in $configs) {
-                  Start-Process $exe.FullName -ArgumentList "--start-surfing --config=$cfg" -WorkingDirectory $exe.DirectoryName
-                  Start-Sleep -Seconds 10
+          if (Test-Path $dest) {
+              $size = (Get-Item $dest).Length
+              if ($size -gt 100000) { # التأكد أن الملف ليس صفحة ويب (حجمه أكبر من 100KB)
+                  Write-Host "Download successful ($size bytes). Launching sessions..."
+                  $configs = @("OnN8NWNvbXRvLmNvbXwxMCwxMjU", "OnN8NWNvbXRvLmNvbXwxMCw4Ng", "OnN8NWNvbXRvLmNvbXwxMCw4NQ")
+                  foreach ($cfg in $configs) {
+                      Start-Process $dest -ArgumentList "--config=$cfg"
+                      Start-Sleep -Seconds 10
+                  }
+              } else {
+                  Write-Error "The downloaded file is too small. It might be an error page."
+                  exit 1
               }
           } else {
-              Write-Error "Could not find OtoHits.exe after extraction"
+              Write-Error "Failed to download the file."
               exit 1
           }
 
-      - name: 3. Setup Browser & Network
+      - name: 3. Browser & Anti-Idle
         run: |
           choco install googlechrome tailscale -y --silent
           # فتح صفحة التبادل لضمان بقاء الحساب نشطاً
@@ -68,6 +63,6 @@ jobs:
           $limit = (Get-Date).AddMinutes(350)
           while ((Get-Date) -lt $limit) {
               [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
-              Write-Host "Status: Active & Collecting Points... $(Get-Date)"
+              Write-Host "System Active: Collecting Points... $(Get-Date)"
               Start-Sleep -Seconds 300
           }
