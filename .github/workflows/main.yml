@@ -1,4 +1,4 @@
-name: RDP-5Conto-Points-Collector
+name: RDP-5Conto-Referral-Only
 
 on:
   schedule:
@@ -6,66 +6,53 @@ on:
   workflow_dispatch:
 
 jobs:
-  points-collector:
+  referral-engine:
     runs-on: windows-latest
     timeout-minutes: 360
 
     steps:
-      - name: 1. Configure RDP System
+      - name: 1. Setup RDP Identity
         shell: pwsh
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-          $randId = Get-Random -Minimum 10 -Maximum 99
-          $user = "Worker_$randId"
-          $pass = "Points_2026_Safe"
+          $id = Get-Random -Minimum 100 -Maximum 999
+          $user = "Ref_Manager_$id"
+          $pass = "Admin_Ref_2026_!"
           $securePass = ConvertTo-SecureString $pass -AsPlainText -Force
           New-LocalUser -Name $user -Password $securePass -AccountNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member $user
-          # تخزين البيانات للخطوات التالية
           "RDP_USER=$user" | Out-File -FilePath $env:GITHUB_ENV -Append
           "RDP_PASS=$pass" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: 2. Core Tools Installation
-        run: choco install googlechrome 7zip tailscale -y --silent --ignore-checksums
+      - name: 2. Install Chrome & Tailscale
+        run: choco install googlechrome tailscale -y --silent --ignore-checksums
 
-      - name: 3. Setup Otohits with 5Conto Config
+      - name: 3. Launch 5Conto Referrals Page
+        run: |
+          # فتح المتصفح مباشرة على صفحة الإحالات فقط
+          # سيقوم هذا الأمر بفتح الموقع بوضع ملء الشاشة لضمان احتساب النشاط
+          $refLink = "https://5conto.com/referrals"
+          Start-Process "chrome.exe" -ArgumentList "$refLink --disable-popup-blocking --no-first-run --start-maximized"
+
+      - name: 4. Connect Network (Tailscale)
         shell: pwsh
         run: |
-          $url = "https://github.com/ungerland2002/01/releases/download/otohits/Otohits_Portable.zip"
-          Invoke-WebRequest -Uri $url -OutFile "C:\Otohits.zip"
-          & "C:\Program Files\7-Zip\7z.exe" x "C:\Otohits.zip" "-oC:\OtohitsApp" -y
-          $exe = Get-ChildItem -Path "C:\OtohitsApp" -Filter "OtoHits.exe" -Recurse | Select-Object -First 1
-          if ($exe) { 
-              # استخدام الكود الجديد الخاص بك OnN8NWNvbnRvLmNvbXwxMCwxMjU
-              Start-Process $exe.FullName -ArgumentList "--start-surfing --config=OnN8NWNvbnRvLmNvbXwxMCwxMjU" -WorkingDirectory $exe.DirectoryName 
-          }
-
-      - name: 4. Launch 5Conto Browser Session
-        run: |
-          # فتح كروم بوضع ملء الشاشة مع تعطيل الحماية لفتح جميع صفحات الربح
-          $targetLinks = "https://5conto.com/login", "https://5conto.com/dashboard"
-          Start-Process "chrome.exe" -ArgumentList "$targetLinks --disable-popup-blocking --no-first-run --start-maximized"
-
-      - name: 5. Establish Network (Tailscale)
-        shell: pwsh
-        run: |
-          # تسمية الجهاز بطريقة صحيحة لتجنب خطأ DNS Label
-          $cleanName = "collector-$(Get-Random -Minimum 1000 -Maximum 9999)"
-          & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=$cleanName
+          $hostName = "node-ref-$((Get-Random -Minimum 1000 -Maximum 9999))"
+          & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=$hostName
           $ip = & "C:\Program Files\Tailscale\tailscale.exe" ip -4
           "MY_IP=$ip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: 6. Stay Active & Mining (5h 50m)
+      - name: 5. Stay Active & Auto-Refresh (5h 50m)
         shell: pwsh
         run: |
-          Write-Host "--- SYSTEM STATUS ---"
-          Write-Host "IP Address: $env:MY_IP"
-          Write-Host "Credentials: $env:RDP_USER / $env:RDP_PASS"
-          Write-Host "---------------------"
-          $endTime = (Get-Date).AddMinutes(350)
-          while ((Get-Date) -lt $endTime) {
-              Write-Host "Session Alive - Collecting 5Conto Points: $(Get-Date)"
-              # منع النظام من الدخول في وضع السكون (Idle)
-              [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
-              Start-Sleep -Seconds 180
+          Write-Host "--- REFERRAL SYSTEM ACTIVE (NO OTOHITS) ---"
+          Write-Host "IP: $env:MY_IP"
+          Write-Host "Target: https://5conto.com/referrals"
+          Write-Host "------------------------------------------"
+          $limit = (Get-Date).AddMinutes(350)
+          while ((Get-Date) -lt $limit) {
+              # تحديث الصفحة كل 10 دقائق لضمان بقاء الجلسة نشطة (Keep-Alive)
+              Write-Host "Refreshing Session... $(Get-Date)"
+              [System.Windows.Forms.SendKeys]::SendWait('{F5}') 
+              Start-Sleep -Seconds 600
           }
