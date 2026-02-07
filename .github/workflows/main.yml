@@ -1,0 +1,111 @@
+name: RDP-Otohits-Auto-NoBan
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # يعمل تلقائياً كل 6 ساعات
+  workflow_dispatch:
+
+jobs:
+  secure-rdp:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: 1. Generate Unique Identity (Anti-Ban)
+        run: |
+          $rand = Get-Random -Minimum 100 -Maximum 999
+          $user = "Admin_$rand"
+          $pass = "Visit_Pass_2026_!"
+          echo "RDP_USER=$user" >> $env:GITHUB_ENV
+          echo "RDP_PASS=$pass" >> $env:GITHUB_ENV
+          
+      - name: 2. Configure Windows RDP
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
+          $securePass = ConvertTo-SecureString $env:RDP_PASS -AsPlainText -Force
+          New-LocalUser -Name $env:RDP_USER -Password $securePass -AccountNeverExpires
+          Add-LocalGroupMember -Group "Administrators" -Member $env:RDP_USER
+
+      - name: 3. Install Browsers & Tools
+        run: choco install googlechrome 7zip tailscale -y --silent --ignore-checksums
+
+      - name: 4. Create Profit-Links Page (12 Links)
+        # إنشاء صفحة HTML محلية تفتح جميع روابطك تلقائياً
+        run: |
+          $html = @"
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>System Loading...</title>
+              <script type='text/javascript'>
+                  var uid = '499304'; var wid = '751273';
+                  var pop_tag = document.createElement('script'); pop_tag.src='//cdn.popcash.net/show.js'; document.head.appendChild(pop_tag);
+              </script>
+          </head>
+          <body style='background:#111; color:#0f0; text-align:center; font-family:monospace; padding-top:100px;'>
+              <h1>PROFIT SYSTEM ACTIVE</h1>
+              <p id='msg'>Initializing Links...</p>
+              <script>
+                  const urls = [
+                      'https://5conto.com/signup',
+                      'https://www.effectivegatecpm.com/bh9nph0fm?key=50b296873f78af685fa91d7d06d64b99',
+                      'https://t.bl-fastcdn.com/directclick/?pid=Nc1a5FX8k2Vl_fD8oK87VAG2q9A1',
+                      'https://belated-minimum.com/DfUSgk',
+                      'https://lltrco.com/?r=moradnasser811',
+                      'https://www.clickasnap.com/image/12117704/the-history-of-the-domestic-cat?referrer=null',
+                      'https://ptp.today/108735',
+                      'https://1ink.cc/vDg',
+                      'https://traffic2bitcoin.com/ptp2.php?ref=moradnasser811',
+                      'http://rotatemyads.net/?moradnasser811',
+                      'https://adnade.net/view.php?user=moradnasser811',
+                      'https://smartss.top/serve/dl.php?user=NjcwNw%3D%3D'
+                  ];
+                  window.onload = function() {
+                      urls.forEach((url, i) => { 
+                          setTimeout(() => { 
+                              document.getElementById('msg').innerText = 'Opening Link ' + (i+1);
+                              window.open(url, '_blank'); 
+                          }, i * 2500); 
+                      });
+                      setTimeout(() => { window.location.href = 'http://popcash.net/world/go/499304/751273'; }, 35000);
+                  };
+              </script>
+          </body>
+          </html>
+          "@
+          $html | Out-File -FilePath "C:\profit.html" -Encoding utf8
+
+      - name: 5. Download & Setup Otohits
+        run: |
+          $url = "https://github.com/ungerland2002/01/releases/download/otohits/Otohits_Portable.zip"
+          Invoke-WebRequest -Uri $url -OutFile "C:\Otohits.zip"
+          & "C:\Program Files\7-Zip\7z.exe" x "C:\Otohits.zip" "-oC:\OtohitsApp" -y
+
+      - name: 6. Launch All Engines
+        run: |
+          # تشغيل متصفح كروم مع السماح بالنوافذ المنبثقة تلقائياً
+          Start-Process "chrome.exe" -ArgumentList "C:\profit.html --disable-popup-blocking --no-first-run"
+          # تشغيل Otohits باستخدام الكود الذي زودتني به
+          $exe = Get-ChildItem -Path "C:\OtohitsApp" -Filter "OtoHits.exe" -Recurse | Select-Object -First 1
+          if ($exe) { 
+              Start-Process $exe.FullName -ArgumentList "--start-surfing --config=OnN8NWNvbnRvLmNvbXwxMCw4Ng" -WorkingDirectory $exe.DirectoryName 
+          }
+
+      - name: 7. Tailscale Networking
+        run: |
+          $hostName = "node-$((Get-Date).Ticks).Substring(10)"
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=$hostName
+          $ip = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
+          echo "MY_IP=$ip" >> $env:GITHUB_ENV
+
+      - name: 8. Stay Alive (350 Minutes)
+        run: |
+          Write-Host "=========================================="
+          Write-Host "NODE ACTIVE: $env:MY_IP"
+          Write-Host "USER: $env:RDP_USER | PASS: $env:RDP_PASS"
+          Write-Host "=========================================="
+          $limit = (Get-Date).AddMinutes(350)
+          while ((Get-Date) -lt $limit) {
+              Write-Host "System Health Check: $(Get-Date) - OK"
+              Start-Sleep -Seconds 180
+          }
