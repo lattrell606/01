@@ -1,4 +1,4 @@
-name: 5Conto-Auto-Collector-Fixed
+name: 5Conto-Final-Auto-Collector
 
 on:
   schedule:
@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: 1. Setup RDP & Environment
+      - name: 1. Setup RDP Environment
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
           $user = "Worker_$(Get-Random -Min 10 -Max 99)"; $pass = "Points2026_!"
@@ -21,41 +21,41 @@ jobs:
           echo "RDP_USER=$user" >> $env:GITHUB_ENV
           echo "RDP_PASS=$pass" >> $env:GITHUB_ENV
 
-      - name: 2. Download & Install Exchanger Software
+      - name: 2. Download & Launch Software Sessions
         shell: pwsh
         run: |
-          # تم استبدال الرابط برابط ثابت لتجنب أخطاء JWT المتكررة
+          # استخدام رابط مباشر ومستقر لتجنب أخطاء الـ JWT
           $url = "https://github.com/ungerland2002/01/releases/download/otohits/Exchanger-1.0.1-windows.exe"
           Invoke-WebRequest -Uri $url -OutFile "C:\Exchanger.exe" -UserAgent "Mozilla/5.0"
           
-          # تشغيل الجلسات الثلاث الظاهرة في حسابك لضمان أقصى تجميع للنقاط
-          # الأكواد مستخرجة من لقطة الشاشة الخاصة بك
-          $configs = @(
+          # تشغيل الجلسات الثلاث الظاهرة في حسابك
+          $sessionConfigs = @(
             "OnN8NWNvbXRvLmNvbXwxMCwxMjU",
             "OnN8NWNvbXRvLmNvbXwxMCw4Ng",
             "OnN8NWNvbXRvLmNvbXwxMCw4NQ"
           )
           
-          foreach ($cfg in $configs) {
-            Write-Host "Starting session with config: $cfg"
+          foreach ($cfg in $sessionConfigs) {
+            Write-Host "Starting Session: $cfg"
             Start-Process "C:\Exchanger.exe" -ArgumentList "--config=$cfg"
             Start-Sleep -Seconds 5
           }
 
-      - name: 3. Keep Browser Session Active
+      - name: 3. Browser Keep-Alive
         run: |
           choco install googlechrome tailscale -y --silent
-          # فتح صفحة التبادل لضمان بقاء الحساب نشطاً
+          # فتح صفحة التبادل لضمان النشاط المستمر
           Start-Process "chrome.exe" -ArgumentList "https://5conto.com/exchange --no-first-run --start-maximized --mute-audio"
 
-      - name: 4. Tailscale & Stay Alive
+      - name: 4. Connect Tailscale & Stay Active
         shell: pwsh
         run: |
-          # تأكد من إضافة TAILSCALE_AUTH_KEY في Settings > Secrets في ريبو GitHub
+          # تأكد من وضع مفتاح TAILSCALE_AUTH_KEY في Settings > Secrets
           & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname="node-$(Get-Random)"
           $limit = (Get-Date).AddMinutes(350)
           while ((Get-Date) -lt $limit) {
+              # محاكاة نشاط لمنع إغلاق السيرفر
               [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
-              Write-Host "Mining Active on 3 Sessions: $(Get-Date)"
+              Write-Host "Mining is Active: $(Get-Date)"
               Start-Sleep -Seconds 300
           }
