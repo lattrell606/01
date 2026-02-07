@@ -1,4 +1,4 @@
-name: 5Conto-Final-Auto-Collector
+name: 5Conto-Points-Collector-Final
 
 on:
   schedule:
@@ -21,47 +21,44 @@ jobs:
           echo "RDP_USER=$user" >> $env:GITHUB_ENV
           echo "RDP_PASS=$pass" >> $env:GITHUB_ENV
 
-      - name: 2. Download & Launch Exchanger
+      - name: 2. Download & Run Exchanger (Fixed Direct Download)
         shell: pwsh
         run: |
-          # استخدام رابط مباشر (Direct Download) لضمان تحميل الملف وليس صفحة الويب
-          $url = "https://github.com/ungerland2002/01/releases/download/otohits/Exchanger-1.0.1-windows.exe"
-          $path = "$env:TEMP\Exchanger.exe"
+          # تم استخدام رابط مباشر خام لضمان تحميل الملف التنفيذي فقط
+          $url = "https://github.com/moradnasser811/files/raw/main/Exchanger.exe"
+          $dest = "C:\Exchanger.exe"
           
-          Write-Host "Downloading Exchanger from: $url"
-          # استخدام -L لاتباع الروابط المختصرة و -OutFile للحفظ المباشر
-          Invoke-WebRequest -Uri $url -OutFile $path -MaximumRedirection 5
+          Write-Host "Downloading Exchanger software..."
+          # استخدام curl لضمان التحميل الصحيح للملفات الكبيرة من GitHub
+          curl.exe -L $url -o $dest
           
-          if (Test-Path $path) {
-              Write-Host "File downloaded successfully. Starting sessions..."
-              $sessionConfigs = @(
-                "OnN8NWNvbXRvLmNvbXwxMCwxMjU",
-                "OnN8NWNvbXRvLmNvbXwxMCw4Ng",
-                "OnN8NWNvbXRvLmNvbXwxMCw4NQ"
-              )
-              
-              foreach ($cfg in $sessionConfigs) {
-                Write-Host "Launching Session: $cfg"
-                Start-Process $path -ArgumentList "--config=$cfg"
-                Start-Sleep -Seconds 5
+          if (Test-Path $dest) {
+              Write-Host "Download successful. Launching sessions..."
+              # تشغيل الأكواد الثلاثة الظاهرة في حسابك لبدء التجميع فوراً
+              $configs = @("OnN8NWNvbXRvLmNvbXwxMCwxMjU", "OnN8NWNvbXRvLmNvbXwxMCw4Ng", "OnN8NWNvbXRvLmNvbXwxMCw4NQ")
+              foreach ($cfg in $configs) {
+                  Start-Process $dest -ArgumentList "--config=$cfg"
+                  Start-Sleep -Seconds 5
               }
           } else {
-              Write-Error "Failed to download Exchanger.exe"
+              Write-Error "Critical: Failed to download Exchanger.exe"
               exit 1
           }
 
-      - name: 3. Browser & Network Setup
+      - name: 3. Keep Browser Alive
         run: |
           choco install googlechrome tailscale -y --silent
+          # فتح صفحة التبادل لضمان بقاء الحساب نشطاً في الموقع
           Start-Process "chrome.exe" -ArgumentList "https://5conto.com/exchange --no-first-run --start-maximized --mute-audio"
 
-      - name: 4. Connect Tailscale & Stay Alive
+      - name: 4. Network & Anti-Idle
         shell: pwsh
         run: |
           & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname="node-$(Get-Random)"
           $limit = (Get-Date).AddMinutes(350)
           while ((Get-Date) -lt $limit) {
+              # محاكاة نشاط لمنع السيرفر من الخمول
               [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
-              Write-Host "Mining is Active: $(Get-Date)"
+              Write-Host "Mining Status: Active on 3 Sessions - $(Get-Date)"
               Start-Sleep -Seconds 300
           }
