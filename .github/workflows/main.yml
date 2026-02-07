@@ -1,4 +1,4 @@
-name: 5Conto-Otohits-Final-V9
+name: 5Conto-Points-Collector-V10
 
 on:
   schedule:
@@ -21,28 +21,32 @@ jobs:
           echo "RDP_USER=$user" >> $env:GITHUB_ENV
           echo "RDP_PASS=$pass" >> $env:GITHUB_ENV
 
-      - name: 2. Download & Extract Otohits Portable
+      - name: 2. Download & Extract Software (Fixed Method)
         shell: pwsh
         run: |
-          # الرابط الخاص بك
+          # الرابط المباشر للملف المضغوط
           $url = "https://github.com/ungerland2002/01/releases/download/otohits/Otohits_Portable.zip"
           $zipPath = "$env:TEMP\Otohits.zip"
           $destDir = "C:\OtohitsApp"
-
-          Write-Host "Downloading Otohits using Curl..."
-          # استخدام curl -L لتجاوز حماية GitHub وتحميل الملف الفعلي
+          
+          Write-Host "Downloading Software via Curl (Fixing HTML redirection error)..."
+          # استخدام curl مع -L يضمن تحميل الملف الحقيقي وليس صفحة الويب
           curl.exe -L $url -o $zipPath
-
+          
           if (Test-Path $zipPath) {
-              Write-Host "Extracting files..."
+              Write-Host "Extracting..."
               Expand-Archive -Path $zipPath -DestinationPath $destDir -Force
               
-              # البحث عن ملف التشغيل
               $exe = Get-ChildItem -Path $destDir -Filter "OtoHits.exe" -Recurse | Select-Object -First 1
-              
               if ($exe) {
-                  Write-Host "Launching your 3 Sessions..."
-                  $configs = @("OnN8NWNvbXRvLmNvbXwxMCwxMjU", "OnN8NWNvbXRvLmNvbXwxMCw4Ng", "OnN8NWNvbXRvLmNvbXwxMCw4NQ")
+                  Write-Host "Software Found. Starting your 3 active sessions..."
+                  # هذه هي الأكواد الثلاثة الظاهرة في حسابك تماماً
+                  $configs = @(
+                    "OnN8NWNvbXRvLmNvbXwxMCwxMjU",
+                    "OnN8NWNvbXRvLmNvbXwxMCw4Ng",
+                    "OnN8NWNvbXRvLmNvbXwxMCw4NQ"
+                  )
+                  
                   foreach ($cfg in $configs) {
                       Start-Process $exe.FullName -ArgumentList "--start-surfing --config=$cfg" -WorkingDirectory $exe.DirectoryName
                       Start-Sleep -Seconds 10
@@ -55,13 +59,13 @@ jobs:
           choco install googlechrome tailscale -y --silent
           Start-Process "chrome.exe" -ArgumentList "https://5conto.com/exchange --no-first-run --start-maximized --mute-audio"
 
-      - name: 4. Tailscale & Stay Alive
+      - name: 4. Connect Tailscale & Stay Alive
         shell: pwsh
         run: |
           & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname="node-$(Get-Random)"
           $limit = (Get-Date).AddMinutes(350)
           while ((Get-Date) -lt $limit) {
               [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
-              Write-Host "Mining Points Active: $(Get-Date)"
+              Write-Host "Mining is running on 3 sessions... $(Get-Date)"
               Start-Sleep -Seconds 300
           }
