@@ -24,28 +24,36 @@ jobs:
       - name: 2. Download & Install Exchanger Software
         shell: pwsh
         run: |
-          # تحميل البرنامج الرسمي كما هو موضح في زر "Download software" في صورتك
-          $url = "https://release-assets.githubusercontent.com/github-production-release-asset/143515148/1e17c100-fc95-11e8-9f5c-1362cb778188?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-02-07T18%3A00%3A25Z&rscd=attachment%3B+filename%3DExchanger-1.0.1-windows.exe&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-02-07T16%3A59%3A40Z&ske=2026-02-07T18%3A00%3A25Z&sks=b&skv=2018-11-09&sig=zs8du0OkhRBVXQ3lNtOgm2WKXUneXFUbTR7TTaAzTLg%3D&jwt=eyJ0eXAiOiJKV1QiLCJalgciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3MDQ4Njk0MCwibmJmIjoxNzcwNDg1MTQwLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.GGKgBmQIW5KLWFx5QPoqzAl9JekeDGc7r6PeNZK7lf8&response-content-disposition=attachment%3B%20filename%3DExchanger-1.0.1-windows.exe&response-content-type=application%2Foctet-stream"
+          # تم تغيير الرابط إلى رابط مباشر ومستقر لتجنب خطأ JWT
+          $url = "https://github.com/ungerland2002/01/releases/download/otohits/Exchanger-1.0.1-windows.exe"
           Invoke-WebRequest -Uri $url -OutFile "C:\Exchanger.exe" -UserAgent "Mozilla/5.0"
           
-          # تشغيل البرنامج مع الكود الظاهر في صورتك (Software Session)
-          # سنستخدم أحدث كود ظهر في لقطة الشاشة الخاصة بك
-          Start-Process "C:\Exchanger.exe" -ArgumentList "--config=OnN8NWNvbXRvLmNvbXwxMCw4Ng"
+          # تشغيل الجلسات الثلاث الظاهرة في صورتك لضمان أقصى تجميع للنقاط
+          $configs = @(
+            "OnN8NWNvbXRvLmNvbXwxMCwxMjU",
+            "OnN8NWNvbXRvLmNvbXwxMCw4Ng",
+            "OnN8NWNvbXRvLmNvbXwxMCw4NQ"
+          )
+          
+          foreach ($cfg in $configs) {
+            Start-Process "C:\Exchanger.exe" -ArgumentList "--config=$cfg"
+            Start-Sleep -Seconds 5
+          }
 
       - name: 3. Keep Browser Session Active
         run: |
           choco install googlechrome tailscale -y --silent
-          # فتح صفحة التبادل مباشرة لضمان بقاء الحساب نشطاً
+          # فتح صفحة التبادل لضمان بقاء الحساب نشطاً في المتصفح أيضاً
           Start-Process "chrome.exe" -ArgumentList "https://5conto.com/exchange --no-first-run --start-maximized --mute-audio"
 
-      - name: 4. Tailscale & Keep Alive
+      - name: 4. Tailscale & Stay Alive
         shell: pwsh
         run: |
+          # تأكد من إضافة TAILSCALE_AUTH_KEY في Settings > Secrets
           & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname="node-$(Get-Random)"
           $limit = (Get-Date).AddMinutes(350)
           while ((Get-Date) -lt $limit) {
-              # محاكاة الضغط على مفاتيح لمنع توقف البرنامج
               [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
-              Write-Host "Mining Active: $(Get-Date)"
+              Write-Host "Mining Active on 3 Sessions: $(Get-Date)"
               Start-Sleep -Seconds 300
           }
