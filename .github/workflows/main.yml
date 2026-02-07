@@ -1,64 +1,71 @@
-name: RDP-5Conto-Exchanger-Pro
+name: 5Conto-Auto-Start-Points
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *' # تشغيل تلقائي كل 6 ساعات
+  workflow_dispatch: # تشغيل يدوي عند الحاجة
 
 jobs:
-  exchanger-job:
+  auto-mining:
     runs-on: windows-latest
     timeout-minutes: 360
 
     steps:
-      - name: 1. Setup RDP Identity
+      - name: 1. تحضير نظام الـ RDP
         shell: pwsh
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-          $user = "Exchanger_Host_$(Get-Random -Min 100 -Max 999)"
-          $pass = "Exchange_2026_!"
+          $user = "AutoWorker_$(Get-Random -Min 10 -Max 99)"
+          $pass = "Points2026_!"
           $securePass = ConvertTo-SecureString $pass -AsPlainText -Force
           New-LocalUser -Name $user -Password $securePass -AccountNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member $user
           "RDP_USER=$user" | Out-File -FilePath $env:GITHUB_ENV -Append
           "RDP_PASS=$pass" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: 2. Download & Install Exchanger App
+      - name: 2. تثبيت المتصفح وأدوات الشبكة
+        run: choco install googlechrome tailscale -y --silent
+
+      - name: 3. تحميل وتشغيل برنامج Exchanger تلقائياً
         shell: pwsh
         run: |
-          # الرابط المباشر الذي قدمته للبرنامج
-          $url = "https://release-assets.githubusercontent.com/github-production-release-asset/143515148/1e17c100-fc95-11e8-9f5c-1362cb778188?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-02-07T18%3A00%3A25Z&rscd=attachment%3B+filename%3DExchanger-1.0.1-windows.exe&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-02-07T16%3A59%3A40Z&ske=2026-02-07T18%3A00%3A25Z&sks=b&skv=2018-11-09&sig=zs8du0OkhRBVXQ3lNtOgm2WKXUneXFUbTR7TTaAzTLg%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3MDQ4Njk0MCwibmJmIjoxNzcwNDg1MTQwLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.GGKgBmQIW5KLWFx5QPoqzAl9JekeDGc7r6PeNZK7lf8&response-content-disposition=attachment%3B%20filename%3DExchanger-1.0.1-windows.exe&response-content-type=application%2Foctet-stream"
+          # الرابط المباشر للبرنامج
+          $url = "https://release-assets.githubusercontent.com/github-production-release-asset/143515148/1e17c100-fc95-11e8-9f5c-1362cb778188?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-02-07T18%3A00%3A25Z&rscd=attachment%3B+filename%3DExchanger-1.0.1-windows.exe&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-02-07T16%3A59%3A40Z&ske=2026-02-07T18%3A00%3A25Z&sks=b&skv=2018-11-09&sig=zs8du0OkhRBVXQ3lNtOgm2WKXUneXFUbTR7TTaAzTLg%3D&jwt=eyJ0eXAiOiJKV1QiLCJalgciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3MDQ4Njk0MCwibmJmIjoxNzcwNDg1MTQwLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.GGKgBmQIW5KLWFx5QPoqzAl9JekeDGc7r6PeNZK7lf8&response-content-disposition=attachment%3B%20filename%3DExchanger-1.0.1-windows.exe&response-content-type=application%2Foctet-stream"
+          $exePath = "C:\Exchanger.exe"
           
-          $exePath = "C:\5Conto-Exchanger.exe"
+          Write-Host "Downloading Exchanger Tool..."
           Invoke-WebRequest -Uri $url -OutFile $exePath -UserAgent "Mozilla/5.0"
           
-          # تشغيل البرنامج في الخلفية
+          Write-Host "Launching Exchanger..."
           Start-Process $exePath
-
-      - name: 3. Setup Browser & Network
+          
+      - name: 4. فتح صفحات جمع النقاط في المتصفح
         run: |
-          choco install googlechrome tailscale -y --silent
-          # فتح صفحة الإحالات لضمان تسجيل الدخول بالتوازي مع البرنامج
-          Start-Process "chrome.exe" -ArgumentList "https://5conto.com/referrals --no-first-run --start-maximized"
+          # فتح صفحة الإحالات والتبادل لضمان النشاط المزدوج
+          $target = "https://5conto.com/exchange", "https://5conto.com/referrals"
+          Start-Process "chrome.exe" -ArgumentList "$target --no-first-run --start-maximized --mute-audio"
 
-      - name: 4. Connect Tailscale
+      - name: 5. ربط الشبكة (Tailscale)
         shell: pwsh
         run: |
-          $hostName = "node-ex-$((Get-Random -Min 1000 -Max 9999))"
+          $hostName = "node-$(Get-Random -Min 1000 -Max 9999)"
           & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=$hostName
           $ip = & "C:\Program Files\Tailscale\tailscale.exe" ip -4
           "MY_IP=$ip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: 5. Monitor & Keep Alive (5h 50m)
+      - name: 6. الاستمرار في جمع النقاط (5 ساعات و50 دقيقة)
         shell: pwsh
         run: |
-          Write-Host "--- 5CONTO EXCHANGER ACTIVE ---"
+          Write-Host "=========================================="
+          Write-Host "جمع النقاط بدأ تلقائياً الآن!"
           Write-Host "IP: $env:MY_IP | User: $env:RDP_USER | Pass: $env:RDP_PASS"
-          Write-Host "-------------------------------"
+          Write-Host "=========================================="
           $limit = (Get-Date).AddMinutes(350)
           while ((Get-Date) -lt $limit) {
-              # محاكاة نشاط لمنع البرنامج من التوقف
+              # محاكاة حركة لمنع السيرفر من الخمول
               [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
-              Write-Host "Mining Points with Exchanger Tool... $(Get-Date)"
-              Start-Sleep -Seconds 300
+              # تحديث صفحة المتصفح كل 10 دقائق لضمان عدم توقف العداد
+              [System.Windows.Forms.SendKeys]::SendWait('{F5}')
+              Write-Host "Status: Mining Points... $(Get-Date)"
+              Start-Sleep -Seconds 600
           }
