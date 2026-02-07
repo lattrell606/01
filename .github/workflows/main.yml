@@ -1,4 +1,4 @@
-name: 5Conto-Auto-Collector-Final-V8
+name: 5Conto-Otohits-Final-V9
 
 on:
   schedule:
@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: 1. Setup RDP Identity
+      - name: 1. Setup RDP System
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
           $user = "Worker_$(Get-Random -Min 10 -Max 99)"; $pass = "Points2026_!"
@@ -21,48 +21,47 @@ jobs:
           echo "RDP_USER=$user" >> $env:GITHUB_ENV
           echo "RDP_PASS=$pass" >> $env:GITHUB_ENV
 
-      - name: 2. Download & Launch Sessions (Fixed Link)
+      - name: 2. Download & Extract Otohits Portable
         shell: pwsh
         run: |
-          # استخدام رابط مباشر خام (Raw) لا يمكن حظره
-          $url = "https://github.com/moradnasser811/files/raw/main/Exchanger.exe"
-          $dest = "C:\Exchanger.exe"
-          
-          Write-Host "Downloading Exchanger software via Curl..."
-          # استخدام curl -L لاتباع الروابط وتحميل الملف الفعلي فقط
-          curl.exe -L $url -o $dest
-          
-          if (Test-Path $dest) {
-              $size = (Get-Item $dest).Length
-              if ($size -gt 100000) { # التأكد أن الملف ليس صفحة ويب (حجمه أكبر من 100KB)
-                  Write-Host "Download successful ($size bytes). Launching sessions..."
+          # الرابط الخاص بك
+          $url = "https://github.com/ungerland2002/01/releases/download/otohits/Otohits_Portable.zip"
+          $zipPath = "$env:TEMP\Otohits.zip"
+          $destDir = "C:\OtohitsApp"
+
+          Write-Host "Downloading Otohits using Curl..."
+          # استخدام curl -L لتجاوز حماية GitHub وتحميل الملف الفعلي
+          curl.exe -L $url -o $zipPath
+
+          if (Test-Path $zipPath) {
+              Write-Host "Extracting files..."
+              Expand-Archive -Path $zipPath -DestinationPath $destDir -Force
+              
+              # البحث عن ملف التشغيل
+              $exe = Get-ChildItem -Path $destDir -Filter "OtoHits.exe" -Recurse | Select-Object -First 1
+              
+              if ($exe) {
+                  Write-Host "Launching your 3 Sessions..."
                   $configs = @("OnN8NWNvbXRvLmNvbXwxMCwxMjU", "OnN8NWNvbXRvLmNvbXwxMCw4Ng", "OnN8NWNvbXRvLmNvbXwxMCw4NQ")
                   foreach ($cfg in $configs) {
-                      Start-Process $dest -ArgumentList "--config=$cfg"
+                      Start-Process $exe.FullName -ArgumentList "--start-surfing --config=$cfg" -WorkingDirectory $exe.DirectoryName
                       Start-Sleep -Seconds 10
                   }
-              } else {
-                  Write-Error "The downloaded file is too small. It might be an error page."
-                  exit 1
               }
-          } else {
-              Write-Error "Failed to download the file."
-              exit 1
           }
 
-      - name: 3. Browser & Anti-Idle
+      - name: 3. Setup Browser & Network
         run: |
           choco install googlechrome tailscale -y --silent
-          # فتح صفحة التبادل لضمان بقاء الحساب نشطاً
           Start-Process "chrome.exe" -ArgumentList "https://5conto.com/exchange --no-first-run --start-maximized --mute-audio"
 
-      - name: 4. Connect Tailscale & Stay Alive
+      - name: 4. Tailscale & Stay Alive
         shell: pwsh
         run: |
           & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname="node-$(Get-Random)"
           $limit = (Get-Date).AddMinutes(350)
           while ((Get-Date) -lt $limit) {
               [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
-              Write-Host "System Active: Collecting Points... $(Get-Date)"
+              Write-Host "Mining Points Active: $(Get-Date)"
               Start-Sleep -Seconds 300
           }
