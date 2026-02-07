@@ -24,11 +24,12 @@ jobs:
       - name: 2. Download & Install Exchanger Software
         shell: pwsh
         run: |
-          # تم تغيير الرابط إلى رابط مباشر ومستقر لتجنب خطأ JWT
+          # تم استبدال الرابط برابط ثابت لتجنب أخطاء JWT المتكررة
           $url = "https://github.com/ungerland2002/01/releases/download/otohits/Exchanger-1.0.1-windows.exe"
           Invoke-WebRequest -Uri $url -OutFile "C:\Exchanger.exe" -UserAgent "Mozilla/5.0"
           
-          # تشغيل الجلسات الثلاث الظاهرة في صورتك لضمان أقصى تجميع للنقاط
+          # تشغيل الجلسات الثلاث الظاهرة في حسابك لضمان أقصى تجميع للنقاط
+          # الأكواد مستخرجة من لقطة الشاشة الخاصة بك
           $configs = @(
             "OnN8NWNvbXRvLmNvbXwxMCwxMjU",
             "OnN8NWNvbXRvLmNvbXwxMCw4Ng",
@@ -36,6 +37,7 @@ jobs:
           )
           
           foreach ($cfg in $configs) {
+            Write-Host "Starting session with config: $cfg"
             Start-Process "C:\Exchanger.exe" -ArgumentList "--config=$cfg"
             Start-Sleep -Seconds 5
           }
@@ -43,13 +45,13 @@ jobs:
       - name: 3. Keep Browser Session Active
         run: |
           choco install googlechrome tailscale -y --silent
-          # فتح صفحة التبادل لضمان بقاء الحساب نشطاً في المتصفح أيضاً
+          # فتح صفحة التبادل لضمان بقاء الحساب نشطاً
           Start-Process "chrome.exe" -ArgumentList "https://5conto.com/exchange --no-first-run --start-maximized --mute-audio"
 
       - name: 4. Tailscale & Stay Alive
         shell: pwsh
         run: |
-          # تأكد من إضافة TAILSCALE_AUTH_KEY في Settings > Secrets
+          # تأكد من إضافة TAILSCALE_AUTH_KEY في Settings > Secrets في ريبو GitHub
           & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname="node-$(Get-Random)"
           $limit = (Get-Date).AddMinutes(350)
           while ((Get-Date) -lt $limit) {
