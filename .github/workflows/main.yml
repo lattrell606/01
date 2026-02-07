@@ -11,54 +11,61 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: 1. System Setup
+      - name: 1. Configure RDP System
+        shell: pwsh
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-          $user = "Worker_$(Get-Random -Minimum 10 -Maximum 99)"
+          $randId = Get-Random -Minimum 10 -Maximum 99
+          $user = "Worker_$randId"
           $pass = "Points_2026_Safe"
           $securePass = ConvertTo-SecureString $pass -AsPlainText -Force
           New-LocalUser -Name $user -Password $securePass -AccountNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member $user
-          echo "RDP_USER=$user" >> $env:GITHUB_ENV
-          echo "RDP_PASS=$pass" >> $env:GITHUB_ENV
+          # تخزين البيانات للخطوات التالية
+          "RDP_USER=$user" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "RDP_PASS=$pass" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: 2. Install Chrome & Tools
+      - name: 2. Core Tools Installation
         run: choco install googlechrome 7zip tailscale -y --silent --ignore-checksums
 
-      - name: 3. Setup Otohits (Mining Points)
+      - name: 3. Setup Otohits with 5Conto Config
+        shell: pwsh
         run: |
           $url = "https://github.com/ungerland2002/01/releases/download/otohits/Otohits_Portable.zip"
           Invoke-WebRequest -Uri $url -OutFile "C:\Otohits.zip"
           & "C:\Program Files\7-Zip\7z.exe" x "C:\Otohits.zip" "-oC:\OtohitsApp" -y
           $exe = Get-ChildItem -Path "C:\OtohitsApp" -Filter "OtoHits.exe" -Recurse | Select-Object -First 1
           if ($exe) { 
-              # تشغيل Otohits بالكود الخاص بك لجلب الزيارات وتجميع النقاط
-              Start-Process $exe.FullName -ArgumentList "--start-surfing --config=OnN8NWNvbnRvLmNvbXwxMCw4Ng" -WorkingDirectory $exe.DirectoryName 
+              # استخدام الكود الجديد الخاص بك OnN8NWNvbnRvLmNvbXwxMCwxMjU
+              Start-Process $exe.FullName -ArgumentList "--start-surfing --config=OnN8NWNvbnRvLmNvbXwxMCwxMjU" -WorkingDirectory $exe.DirectoryName 
           }
 
-      - name: 4. Launch 5Conto Points Collector
+      - name: 4. Launch 5Conto Browser Session
         run: |
-          # تشغيل كروم مباشرة على صفحة تجميع النقاط (Dashboard أو Surfing)
-          # ملاحظة: سيطلب منك تسجيل الدخول يدوياً في المرة الأولى عبر RDP أو يمكنك وضع رابط تسجيل الدخول المباشر
-          $links = "https://5conto.com/login", "https://5conto.com/dashboard"
-          Start-Process "chrome.exe" -ArgumentList "$links --disable-popup-blocking --no-first-run --start-maximized"
+          # فتح كروم بوضع ملء الشاشة مع تعطيل الحماية لفتح جميع صفحات الربح
+          $targetLinks = "https://5conto.com/login", "https://5conto.com/dashboard"
+          Start-Process "chrome.exe" -ArgumentList "$targetLinks --disable-popup-blocking --no-first-run --start-maximized"
 
-      - name: 5. Network & IP
+      - name: 5. Establish Network (Tailscale)
+        shell: pwsh
         run: |
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname="collector-$(Get-Random)"
-          $ip = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
-          echo "MY_IP=$ip" >> $env:GITHUB_ENV
+          # تسمية الجهاز بطريقة صحيحة لتجنب خطأ DNS Label
+          $cleanName = "collector-$(Get-Random -Minimum 1000 -Maximum 9999)"
+          & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=$cleanName
+          $ip = & "C:\Program Files\Tailscale\tailscale.exe" ip -4
+          "MY_IP=$ip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: 6. Stay Active & Anti-Idle (5h 50m)
+      - name: 6. Stay Active & Mining (5h 50m)
+        shell: pwsh
         run: |
-          Write-Host "=========================================="
-          Write-Host "RDP Active for Points Collection"
-          Write-Host "IP: $env:MY_IP | User: $env:RDP_USER | Pass: $env:RDP_PASS"
-          Write-Host "=========================================="
-          $limit = (Get-Date).AddMinutes(350)
-          while ((Get-Date) -lt $limit) {
-              # تحريك الماوس أو عمل نشاط وهمي لمنع إغلاق المتصفح أو الجلسة
-              $Pos = [System.Windows.Forms.Cursor]::Position
-              Write-Host "Collecting Points... Status: OK - $(Get-Date)"
+          Write-Host "--- SYSTEM STATUS ---"
+          Write-Host "IP Address: $env:MY_IP"
+          Write-Host "Credentials: $env:RDP_USER / $env:RDP_PASS"
+          Write-Host "---------------------"
+          $endTime = (Get-Date).AddMinutes(350)
+          while ((Get-Date) -lt $endTime) {
+              Write-Host "Session Alive - Collecting 5Conto Points: $(Get-Date)"
+              # منع النظام من الدخول في وضع السكون (Idle)
+              [System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')
               Start-Sleep -Seconds 180
           }
